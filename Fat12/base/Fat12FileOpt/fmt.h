@@ -104,14 +104,14 @@ private:
 
 	void GetFatEntry();
 	int GetFatClusCnt(); /* FAT表指明了多少个簇? */
-	void PrintFileData(u16 FstClus, u8 Attr, u32 FileSize);
+	void PrintFileData(char *szDIR_Name, u16 FstClus, u8 Attr, u32 FileSize);
 
 public:
 	Fat12Image(char *FileName);
 	~Fat12Image();
 
 	void GetBootData(Fat12Boot *pBoot);
-	void ProcessAllFiles();
+	void ProcessAllFiles(u16 OFF_DIR); /* OFF_DIR		目录条目相对映像文件第一字节的偏移 */
 };
 
 #endif // FMT_H

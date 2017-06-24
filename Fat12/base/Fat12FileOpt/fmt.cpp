@@ -89,19 +89,20 @@ int Fat12Image::GetFatClusCnt()
 	return ClusCnt;
 }
 
-void Fat12Image::PrintFileData(u16 FstClus, u8 Attr, u32 FileSize)
+void Fat12Image::PrintFileData(char *szDIR_Name, u16 FstClus, u8 Attr, u32 FileSize)
 {
 	int BytesPerClus; // 每簇字节数
 	int ClusNo; // 簇号
 	char *pch;
 	u32 cbToPrs;	// 待处理的字节数
 
+	BytesPerClus = m_Boot.BPB_BytesPerSec*m_Boot.BPB_SecPerClus;
+	ClusNo = FstClus;
+	cbToPrs = FileSize;
+
 	if (Attr == FILE_NORMAL && FileSize > 0)
 	{
 		printf("This is a normal file, data is as follow:\n");
-		BytesPerClus = m_Boot.BPB_BytesPerSec*m_Boot.BPB_SecPerClus;
-		ClusNo = FstClus;
-		cbToPrs = FileSize;
 		do {
 			/* 定位到文件数据 */
 			pch = m_lpBuffer + OFF_DATA + (ClusNo - 2) * BytesPerClus;
@@ -123,7 +124,13 @@ void Fat12Image::PrintFileData(u16 FstClus, u8 Attr, u32 FileSize)
 	}
 	else if (Attr == FILE_DIR && FileSize == 0)
 	{
-		printf("This is a dir. ^_^\n");
+		printf("All files under the dir \"%s\" :\n", szDIR_Name);
+		printf("-----------------------------------------------------");
+		u16 OFF_DIR = OFF_DATA + (ClusNo - 2) * BytesPerClus +
+			2 * sizeof(RootDirEnt); // 越过 . 和 .. 两个特殊文件
+		ProcessAllFiles(OFF_DIR);
+		printf("-----------------------------------------------------");
+		printf("\nDir \"%s\" processed done!\n", szDIR_Name);
 	}
 }
 
@@ -144,12 +151,13 @@ void Fat12Image::GetBootData(Fat12Boot *pBoot)
 		CopyMemory(pBoot, &m_Boot, sizeof(Fat12Boot));
 }
 
-void Fat12Image::ProcessAllFiles()
+void Fat12Image::ProcessAllFiles(u16 OFF_DIR)
 {
 	RootDirEnt RootDir;
 	char szDIR_Name[0xB + 1];
+	char *pch;
 
-	for (char *pch = m_lpBuffer + OFF_RootDir; *pch; pch += sizeof(RootDirEnt))
+	for (pch = m_lpBuffer + OFF_DIR; *pch; pch += sizeof(RootDirEnt))
 	{
 		ZeroMemory(&RootDir, sizeof(RootDirEnt));
 		CopyMemory(RootDir.DIR_Name, (pch + OFF_DIR_Name), 0xB);
@@ -166,6 +174,6 @@ void Fat12Image::ProcessAllFiles()
 		printf("DIR_FstClus: 0x%x\n", RootDir.DIR_FstClus);
 		printf("DIR_FileSize: 0x%x\n", RootDir.DIR_FileSize);
 
-		PrintFileData(RootDir.DIR_FstClus, RootDir.DIR_Attr, RootDir.DIR_FileSize);
+		PrintFileData(szDIR_Name ,RootDir.DIR_FstClus, RootDir.DIR_Attr, RootDir.DIR_FileSize);
 	}
 }
